@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>牛马的日常</title>
+<link rel="manifest" href="./manifest.json">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif}
+body{background:#f4f5f7;color:#222;padding-bottom:70px}
+.tab-bar{position:fixed;bottom:0;left:0;right:0;height:60px;background:#fff;display:flex;border-top:1px solid #ddd;z-index:99}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:#666}
+.tab-item.active{color:#2563eb}
+.page{display:none;padding:16px}
+.page.active{display:block}
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.mic-btn{background:#2563eb;color:#fff;border:none;border-radius:50%;width:48px;height:48px;font-size:22px}
+.card{background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px #00000018}
+.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.stat-card{text-align:center;padding:12px}
+.stat-card .num{font-size:22px;font-weight:bold;color:#2563eb}
+.list-item{padding:12px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:8px;cursor:pointer}
+.btn{padding:8px 14px;border:none;border-radius:8px;background:#2563eb;color:#fff;margin:4px;cursor:pointer}
+.btn-danger{background:#dc2626}
+.form-item{margin:10px 0}
+label{display:block;margin-bottom:4px;font-size:14px;color:#555}
+input,textarea,select{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px}
+.modal{position:fixed;inset:0;background:#00000070;display:none;align-items:center;justify-content:center;z-index:100}
+.modal-box{width:90%;max-width:420px;background:#fff;border-radius:12px;padding:16px}
+.modal.active{display:flex}
+.checkbox{width:20px;height:20px}
+.batch-bar{position:fixed;bottom:64px;left:0;right:0;background:#fff;padding:10px;display:none;border-top:1px solid #ddd;align-items:center;justify-content:center;gap:8px}
+.batch-bar.active{display:flex}
+.thumb{width:60px;height:60px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid #ddd}
+.img-preview{max-width:100%;max-height:200px;border-radius:8px;margin-top:8px;cursor:pointer}
+.upload-area{border:2px dashed #bbb;border-radius:8px;padding:20px;text-align:center;color:#999;cursor:pointer;margin:8px 0}
+.upload-area:hover{border-color:#2563eb;color:#2563eb}
+.note-text{font-size:12px;color:#666;margin-top:4px}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- 首页 -->
+  <div class="page active" id="page-home">
+    <div class="head">
+      <div>
+        <div id="date-text"></div>
+        <h2>牛马的日常</h2>
+      </div>
+      <button class="mic-btn" id="micBtn">🎤</button>
+    </div>
+    <div class="card">
+      <h3>📅 今日计划</h3>
+      <div id="today-list"></div>
+    </div>
+    <h3>💼 工作速览</h3>
+    <div class="card-grid">
+      <div class="card stat-card"><div class="num" id="stat-customer">0</div><div>客户台账</div></div>
+      <div class="card stat-card"><div class="num" id="stat-todo">0</div><div>待办任务</div></div>
+      <div class="card stat-card"><div class="num" id="stat-visit">0</div><div>拜访行程</div></div>
+      <div class="card stat-card"><div class="num" id="stat-doc">0</div><div>资料库</div></div>
+    </div>
+    <h3>🏠 生活速览</h3>
+    <div class="card-grid">
+      <div class="card stat-card"><div class="num" id="stat-pay">0</div><div>今日开销</div></div>
+      <div class="card stat-card"><div class="num" id="stat-family">0</div><div>家庭事务</div></div>
+      <div class="card stat-card"><div class="num" id="stat-collect">0</div><div>收藏夹</div></div>
+      <div class="card stat-card"><div class="num" id="stat-memo">0</div><div>备忘录</div></div>
+    </div>
+  </div>
+  <!-- 工作页 -->
+  <div class="page" id="page-work">
+    <div class="head"><h2>工作模块</h2></div>
+    <div class="list-item" data-target="customer">📇 客户/供应商台账</div>
+    <div class="list-item" data-target="todo">✅ 待办&项目进度</div>
+    <div class="list-item" data-target="visit">🚗 拜访出差行程</div>
+    <div class="list-item" data-target="doc">📄 资料报价库</div>
+    <div class="list-item" data-target="news">📰 行业新闻（预留）</div>
+    <div class="list-item" data-target="bid">📋 环保招标（预留）</div>
+  </div>
+  <!-- 生活页 -->
+  <div class="page" id="page-life">
+    <div class="head"><h2>生活模块</h2></div>
+    <div class="list-item" data-target="bizpay">💰 业务收支记账</div>
+    <div class="list-item" data-target="homepay">🏦 家庭记账资产</div>
+    <div class="list-item" data-target="calendar">📆 日程纪念日</div>
+    <div class="list-item" data-target="fav">⭐ 收藏夹</div>
+    <div class="list-item" data-target="album">🖼️ 相册备忘录</div>
+    <div class="list-item" data-target="house">🧹 家庭事务清单</div>
+  </div>
+  <!-- 我的页面 -->
+  <div class="page" id="page-mine">
+    <div class="head"><h2>设置 & 特色功能</h2></div>
+    <div class="list-item" data-target="map">🗺️ 地图收藏（一键导航）</div>
+    <div class="list-item" data-target="pwd">🔐 密码本 & 证件归档</div>
+    <div class="card">
+      <h3>数据管理</h3>
+      <button class="btn" id="exportBtn">导出Excel备份</button>
+      <button class="btn" id="importBtn">导入Excel恢复</button>
+      <input type="file" id="importFile" accept=".xlsx" style="display:none">
+    </div>
+  </div>
+  <!-- 通用列表容器（动态渲染） -->
+  <div id="list-view" class="page">
+    <div class="head">
+      <button class="btn" id="backBtn">← 返回</button>
+      <h3 id="list-title"></h3>
+      <div>
+        <button class="btn" id="manageBtn">管理</button>
+        <button class="btn" id="addBtn">新增</button>
+      </div>
+    </div>
+    <div id="list-content"></div>
+    <div class="batch-bar" id="batchBar">
+      <span>已选 <span id="selectedCount">0</span> 条</span>
+      <button class="btn btn-danger" id="batchDelBtn">删除选中</button>
+      <button class="btn" id="cancelBatch">取消</button>
+    </div>
+  </div>
+  <!-- 新增/编辑弹窗 -->
+  <div class="modal" id="formModal">
+    <div class="modal-box">
+      <h3 id="form-title">新增记录</h3>
+      <div id="form-body"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn" id="saveForm">保存</button>
+        <button class="btn btn-danger" id="closeForm">取消</button>
+      </div>
+    </div>
+  </div>
+  <!-- 语音预览弹窗 -->
+  <div class="modal" id="voiceModal">
+    <div class="modal-box">
+      <h3>🎤 语音速记</h3>
+      <div style="font-size:12px;color:#e67e22;margin-bottom:8px">⚠️ 语音识别需要联网，说完自动归类，也可以直接打字修改</div>
+      <div class="form-item">
+        <label>识别文字（可手动修改）</label>
+        <textarea id="voiceText" rows="4"></textarea>
+      </div>
+      <div class="form-item">
+        <label>自动归类到</label>
+        <select id="voiceType">
+          <option value="customer">客户台账</option>
+          <option value="todo">待办任务</option>
+          <option value="visit">拜访行程</option>
+          <option value="bizpay">业务记账</option>
+          <option value="calendar">日程提醒</option>
+          <option value="map">地图收藏【说：收藏该地图】</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn" id="voiceSave">确认保存</button>
+        <button class="btn btn-danger" id="voiceStop" style="display:none">⏹ 停止录音</button>
+        <button class="btn btn-danger" id="voiceCancel">取消</button>
+      </div>
+    </div>
+  </div>
+  <!-- 删除确认弹窗 -->
+  <div class="modal" id="delConfirmModal">
+    <div class="modal-box">
+      <p id="delTip">确定删除选中记录？删除后无法恢复！</p>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-danger" id="delOk">确认删除</button>
+        <button class="btn" id="delNo">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- 底部Tab -->
+<div class="tab-bar">
+  <div class="tab-item active" data-page="page-home">🏠首页</div>
+  <div class="tab-item" data-page="page-work">💼工作</div>
+  <div class="tab-item" data-page="page-life">🏠生活</div>
+  <div class="tab-item" data-page="page-mine">⚙️我的</div>
+</div>
+<script>
+// ========== 数据库 IndexedDB 封装 ==========
+let db;
+const DB_NAME = "SelfWorkLifeDB";
+const STORES = ["customer","todo","visit","doc","news","bid","bizpay","homepay","calendar","fav","album","house","map","pwd"];
+
+function openDB(){
+  return new Promise((res,rej)=>{
+    const req = indexedDB.open(DB_NAME,1);
+    req.onupgradeneeded = e=>{
+      db = e.target.result;
+      STORES.forEach(s=>{
+        if(!db.objectStoreNames.contains(s)) db.createObjectStore(s,{keyPath:"id",autoIncrement:true})
+      })
+    }
+    req.onsuccess = e=>{db=e.target.result;res(db)}
+    req.onerror = e=>rej(e)
+  })
+}
+
+async function getAll(store){
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(store,"readonly");
+    const st = tx.objectStore(store);
+    const req = st.getAll();
+    req.onsuccess = e=>resolve(e.target.result);
+    req.onerror = e=>reject(e);
+  })
+}
+
+async function addItem(store,data){
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(store,"readwrite");
+    const st = tx.objectStore(store);
+    const req = st.add(data);
+    req.onsuccess = ()=>{resolve();refreshHomeStat();}
+    req.onerror = e=>reject(e);
+  })
+}
+
+async function delItems(store,ids){
+  for(let id of ids){
+    await new Promise((resolve,reject)=>{
+      const tx = db.transaction(store,"readwrite");
+      const st = tx.objectStore(store);
+      const req = st.delete(id);
+      req.onsuccess = ()=>resolve();
+      req.onerror = e=>reject(e);
+    })
+  }
+  refreshHomeStat();
+}
+
+// ========== 全局状态 ==========
+let currentList = "";
+let batchMode = false;
+let selectedIds = [];
+
+// ========== 页面切换 ==========
+document.querySelectorAll(".tab-item").forEach(tab=>{
+  tab.onclick = ()=>{
+    document.querySelectorAll(".tab-item").forEach(i=>i.classList.remove("active"));
+    tab.classList.add("active");
+    const target = tab.dataset.page;
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+    document.getElementById(target).classList.add("active");
+  }
+})
+
+document.getElementById("backBtn").onclick = ()=>{
+  document.getElementById("list-view").classList.remove("active");
+  document.querySelector(".tab-item.active").click();
+  batchMode=false;selectedIds=[];renderBatch();
+}
+
+// ========== 打开列表页（关键修复：data-target 直接就是表名，不再有 list- 前缀） ==========
+document.querySelectorAll("[data-target]").forEach(el=>{
+  el.onclick = async ()=>{
+    currentList = el.dataset.target;
+    document.getElementById("list-title").innerText = el.innerText;
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+    document.getElementById("list-view").classList.add("active");
+    await renderList();
+  }
+})
+
+async function renderList(){
+  try{
+    const data = await getAll(currentList);
+    const c = document.getElementById("list-content");
+    c.innerHTML = "";
+    if(data.length===0){
+      c.innerHTML="<div style='padding:20px;text-align:center;color:#999'>暂无记录，点右上角「新增」添加</div>";
+      return;
+    }
+    data.forEach(item=>{
+      const div = document.createElement("div");
+      div.className="list-item";
+      // 证件归档：显示缩略图 + 名称 + 备注
+      if(currentList === "pwd" && item.image){
+        div.innerHTML = `
+          <input type="checkbox" class="checkbox batch-check" data-id="${item.id}" style="display:${batchMode?'inline-block':'none'}">
+          <img src="${item.image}" class="thumb" data-full="${item.image}">
+          <div style="flex:1">
+            <div>${item.content || "(未命名)"}</div>
+            ${item.note ? `<div class="note-text">${item.note}</div>` : ''}
+          </div>
+          <div style="font-size:12px;color:#999">${item.ct?new Date(item.ct).toLocaleDateString():''}</div>
+        `;
+        // 点击缩略图放大查看
+        div.querySelector(".thumb").onclick = (e)=>{
+          e.stopPropagation();
+          window.open(item.image, "_blank");
+        };
+      }else{
+        const displayText = item.content || JSON.stringify(item);
+        div.innerHTML = `
+          <input type="checkbox" class="checkbox batch-check" data-id="${item.id}" style="display:${batchMode?'inline-block':'none'}">
+          <div style="flex:1">${displayText}</div>
+          <div style="font-size:12px;color:#999">${item.ct?new Date(item.ct).toLocaleDateString():''}</div>
+        `;
+      }
+      div.onclick = (e)=>{
+        if(e.target.classList.contains("batch-check")) return;
+        if(batchMode){
+          const ck = div.querySelector(".batch-check");
+          ck.checked = !ck.checked;
+          toggleSelect(item.id, ck.checked);
+        }
+      };
+      c.appendChild(div);
+    });
+    bindCheck();
+  }catch(err){
+    alert("读取数据出错："+err.message);
+  }
+}
+
+function bindCheck(){
+  document.querySelectorAll(".batch-check").forEach(ck=>{
+    ck.onchange = ()=>toggleSelect(ck.dataset.id,ck.checked);
+  });
+}
+
+function toggleSelect(id,checked){
+  id = Number(id);
+  if(checked){
+    if(!selectedIds.includes(id)) selectedIds.push(id);
+  }else{
+    selectedIds = selectedIds.filter(i=>i!==id);
+  }
+  renderBatch();
+}
+
+function renderBatch(){
+  document.getElementById("selectedCount").innerText = selectedIds.length;
+  const bar = document.getElementById("batchBar");
+  if(batchMode) bar.classList.add("active");
+  else bar.classList.remove("active");
+  document.querySelectorAll(".batch-check").forEach(c=>c.style.display=batchMode?"inline-block":"none");
+}
+
+document.getElementById("manageBtn").onclick = ()=>{
+  batchMode = !batchMode;
+  selectedIds=[];
+  renderList();
+};
+
+document.getElementById("cancelBatch").onclick = ()=>{batchMode=false;selectedIds=[];renderBatch()};
+
+document.getElementById("batchDelBtn").onclick = ()=>{
+  if(selectedIds.length===0) return alert("请先勾选记录");
+  document.getElementById("delConfirmModal").classList.add("active");
+  document.getElementById("delOk").onclick = async ()=>{
+    await delItems(currentList, selectedIds);
+    document.getElementById("delConfirmModal").classList.remove("active");
+    batchMode=false;selectedIds=[];
+    await renderList();
+  };
+};
+
+document.getElementById("delNo").onclick = ()=>document.getElementById("delConfirmModal").classList.remove("active");
+
+// ========== 新增按钮 ==========
+document.getElementById("addBtn").onclick = ()=>{
+  if(currentList === "pwd"){
+    // 证件归档专用表单：名称 + 图片上传 + 备注
+    document.getElementById("form-title").innerText = "新增证件/密码";
+    document.getElementById("form-body").innerHTML = `
+      <div class="form-item">
+        <label>名称/账号</label>
+        <input id="form-title-input" type="text" placeholder="如：身份证、银行卡、WiFi密码...">
+      </div>
+      <div class="form-item">
+        <label>上传图片（证件照片、截图）</label>
+        <div class="upload-area" id="uploadArea">📷 点击选择图片</div>
+        <input type="file" id="form-file" accept="image/*" style="display:none">
+        <img id="imgPreview" class="img-preview" style="display:none">
+      </div>
+      <div class="form-item">
+        <label>备注说明</label>
+        <textarea id="form-note" rows="3" placeholder="用途、有效期、存放位置等..."></textarea>
+      </div>
+    `;
+    document.getElementById("formModal").classList.add("active");
+    // 图片上传交互
+    const uploadArea = document.getElementById("uploadArea");
+    const fileInput = document.getElementById("form-file");
+    const imgPreview = document.getElementById("imgPreview");
+    uploadArea.onclick = ()=>fileInput.click();
+    fileInput.onchange = (e)=>{
+      const f = e.target.files[0];
+      if(!f) return;
+      if(f.size > 3*1024*1024) return alert("图片不能超过3MB，请压缩后再传");
+      const reader = new FileReader();
+      reader.onload = (ev)=>{
+        imgPreview.src = ev.target.result;
+        imgPreview.style.display = "block";
+        uploadArea.style.display = "none";
+      };
+      reader.readAsDataURL(f);
+    };
+    setTimeout(()=>document.getElementById("form-title-input").focus(),100);
+  }else{
+    // 普通模块：纯文本
+    document.getElementById("form-title").innerText = "新增记录";
+    document.getElementById("form-body").innerHTML = `
+      <div class="form-item"><label>内容</label><textarea id="form-val" rows="4" placeholder="输入记录内容..."></textarea></div>
+    `;
+    document.getElementById("formModal").classList.add("active");
+    setTimeout(()=>document.getElementById("form-val").focus(),100);
+  }
+};
+
+document.getElementById("saveForm").onclick = async ()=>{
+  try{
+    if(currentList === "pwd"){
+      // 证件归档保存
+      const title = document.getElementById("form-title-input").value.trim();
+      const note = document.getElementById("form-note").value.trim();
+      const imgSrc = document.getElementById("imgPreview").src || "";
+      if(!title && !note && !imgSrc) return alert("请至少填写名称或上传图片");
+      await addItem("pwd",{
+        content: title || "(未命名)",
+        note: note,
+        image: imgSrc,
+        ct: new Date().toLocaleString()
+      });
+    }else{
+      // 普通文本保存
+      const val = document.getElementById("form-val").value.trim();
+      if(!val) return alert("内容不能为空");
+      await addItem(currentList,{content:val,ct:new Date().toLocaleString()});
+    }
+    document.getElementById("formModal").classList.remove("active");
+    await renderList();
+  }catch(err){
+    alert("保存失败："+err.message);
+  }
+};
+
+document.getElementById("closeForm").onclick = ()=>document.getElementById("formModal").classList.remove("active");
+
+// ========== 语音速记核心逻辑 ==========
+const micBtn = document.getElementById("micBtn");
+const VoiceModal = document.getElementById("voiceModal");
+let recognizing = false;
+let rec = null;
+let listenTimer = null;
+let allSpokenText = "";  // 累计所有识别到的文字
+
+// 停止关键词：听到这些词自动结束录音
+const STOP_WORDS = ["完毕", "结束", "停一下", "停"];
+
+micBtn.onclick = ()=>{
+  if(recognizing){
+    stopRecording();
+    return;
+  }
+
+  // 不支持语音识别的浏览器：直接打开弹窗手动输入
+  if(!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)){
+    document.getElementById("voiceText").value = "";
+    document.getElementById("voiceType").value = "todo";
+    VoiceModal.classList.add("active");
+    setTimeout(()=>document.getElementById("voiceText").focus(),100);
+    return;
+  }
+
+  // 检查网络（语音识别需要联网）
+  if(!navigator.onLine){
+    alert("当前没有网络，语音识别需要联网才能使用。\n\n你可以直接在弹窗里手动输入文字。");
+    document.getElementById("voiceText").value = "";
+    document.getElementById("voiceType").value = "todo";
+    VoiceModal.classList.add("active");
+    return;
+  }
+
+  startRecording();
+};
+
+function startRecording(){
+  try{
+    const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    rec = new Rec();
+    rec.lang = "zh-CN";
+    rec.continuous = true;        // 持续识别，靠关键词/手动停止
+    rec.interimResults = true;    // 边说边显示
+    rec.maxAlternatives = 1;
+    allSpokenText = "";
+
+    rec.onstart = ()=>{
+      recognizing = true;
+      micBtn.style.background = "#dc2626";
+      micBtn.textContent = "🔴";
+      // 打开语音弹窗显示实时状态
+      document.getElementById("voiceText").value = "";
+      document.getElementById("voiceType").value = "todo";
+      VoiceModal.classList.add("active");
+      VoiceModal.querySelector("h3").innerText = "🔴 正在聆听... 说「完毕」结束";
+      document.getElementById("voiceStop").style.display = "inline-block";
+      document.getElementById("voiceSave").style.opacity = "0.5";
+      // 30秒自动停止保护
+      listenTimer = setTimeout(()=>{
+        if(recognizing){
+          stopRecording();
+        }
+      }, 30000);
+    };
+
+    rec.onresult = (e)=>{
+      let interimText = "";
+      for(let i = e.resultIndex; i < e.results.length; i++){
+        const t = e.results[i][0].transcript;
+        if(e.results[i].isFinal){
+          allSpokenText += t;
+        }else{
+          interimText = t;
+        }
+      }
+      // 显示完整文字（已识别 + 正在识别的）
+      document.getElementById("voiceText").value = allSpokenText + interimText;
+
+      // 检测停止关键词
+      const checkText = allSpokenText + interimText;
+      for(let word of STOP_WORDS){
+        if(checkText.includes(word)){
+          // 去掉停止关键词本身
+          allSpokenText = allSpokenText.replace(word, "");
+          stopRecording();
+          return;
+        }
+      }
+    };
+
+    rec.onerror = (e)=>{
+      if(listenTimer){clearTimeout(listenTimer);listenTimer=null;}
+      recognizing = false;
+      micBtn.style.background = "#2563eb";
+      micBtn.textContent = "🎤";
+      const errMap = {
+        "not-allowed": "麦克风权限被拒绝，请在浏览器设置里允许麦克风权限",
+        "no-speech": "没有听到声音，请靠近麦克风再说一次",
+        "audio-capture": "没有检测到麦克风设备",
+        "network": "语音识别需要联网，请检查网络",
+        "aborted": "录音已取消"
+      };
+      alert(errMap[e.error] || "语音识别出错："+e.error);
+    };
+
+    rec.onend = ()=>{
+      if(listenTimer){clearTimeout(listenTimer);listenTimer=null;}
+      recognizing = false;
+      micBtn.style.background = "#2563eb";
+      micBtn.textContent = "🎤";
+      // 如果有文字，自动归类并显示
+      if(allSpokenText.trim()){
+        parseVoiceText(allSpokenText.trim());
+      }else{
+        VoiceModal.querySelector("h3").innerText = "🎤 语音速记";
+      }
+    };
+
+    rec.start();
+  }catch(err){
+    alert("启动语音失败："+err.message+"\n\n你也可以直接在弹窗里手动输入文字。");
+    document.getElementById("voiceText").value = "";
+    document.getElementById("voiceType").value = "todo";
+    VoiceModal.classList.add("active");
+  }
+}
+
+function stopRecording(){
+  if(rec){
+    try{rec.stop();}catch(e){}
+  }
+  if(listenTimer){clearTimeout(listenTimer);listenTimer=null;}
+  recognizing = false;
+  micBtn.style.background = "#2563eb";
+  micBtn.textContent = "🎤";
+  VoiceModal.querySelector("h3").innerText = "🎤 语音速记";
+  document.getElementById("voiceStop").style.display = "none";
+  document.getElementById("voiceSave").style.opacity = "1";
+}
+
+async function parseVoiceText(text){
+  document.getElementById("voiceText").value = text;
+  let type = "todo";
+  if(text.includes("客户")||text.includes("张总")||text.includes("李总")||text.includes("工厂")) type="customer";
+  else if(text.includes("花了")||text.includes("收入")||text.includes("支出")) type="bizpay";
+  else if(text.includes("拜访")||text.includes("出差")) type="visit";
+  else if(text.includes("明天")||text.includes("下周")||text.includes("提醒")) type="todo";
+  else if(text.includes("纪念日")||text.includes("日程")) type="calendar";
+  if(text.includes("收藏该地图")) type="map";
+  document.getElementById("voiceType").value = type;
+  VoiceModal.classList.add("active");
+}
+
+document.getElementById("voiceSave").onclick = async ()=>{
+  const t = document.getElementById("voiceText").value.trim();
+  const typ = document.getElementById("voiceType").value;
+  if(!t) return;
+  await addItem(typ,{content:t,ct:new Date().toLocaleString()});
+  VoiceModal.classList.remove("active");
+  alert("保存成功");
+};
+
+document.getElementById("voiceCancel").onclick = ()=>{
+  if(recognizing) stopRecording();
+  VoiceModal.classList.remove("active");
+};
+
+document.getElementById("voiceStop").onclick = ()=>stopRecording();
+
+// ========== 首页统计刷新 ==========
+async function refreshHomeStat(){
+  document.getElementById("date-text").innerText = new Date().toLocaleDateString();
+  try{
+    document.getElementById("stat-customer").innerText = (await getAll("customer")).length;
+    document.getElementById("stat-todo").innerText = (await getAll("todo")).length;
+    document.getElementById("stat-visit").innerText = (await getAll("visit")).length;
+    document.getElementById("stat-doc").innerText = (await getAll("doc")).length;
+    document.getElementById("stat-pay").innerText = (await getAll("bizpay")).length;
+    document.getElementById("stat-family").innerText = (await getAll("house")).length;
+    document.getElementById("stat-collect").innerText = (await getAll("fav")).length;
+    document.getElementById("stat-memo").innerText = (await getAll("album")).length;
+  }catch(e){console.warn("首页统计刷新失败",e)}
+}
+
+// ========== Excel 导出导入 ==========
+document.getElementById("exportBtn").onclick = async ()=>{
+  try{
+    const wb = XLSX.utils.book_new();
+    for(let s of STORES){
+      const d = await getAll(s);
+      const sheet = XLSX.utils.json_to_sheet(d.length?d:[{提示:"暂无数据"}]);
+      XLSX.utils.book_append_sheet(wb,sheet,s);
+    }
+    XLSX.writeFile(wb,"牛马的日常备份_"+new Date().toISOString().slice(0,10)+".xlsx");
+  }catch(e){alert("导出失败："+e.message)}
+};
+
+document.getElementById("importBtn").onclick = ()=>document.getElementById("importFile").click();
+
+document.getElementById("importFile").onchange = async e=>{
+  try{
+    const f = e.target.files[0];
+    const buf = await f.arrayBuffer();
+    const wb = XLSX.read(buf);
+    for(let sheetName of wb.SheetNames){
+      const store = sheetName;
+      if(!STORES.includes(store)) continue;
+      const arr = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
+      for(let row of arr){
+        if(row.id) delete row.id;
+        await addItem(store,row);
+      }
+    }
+    alert("导入完成");
+    refreshHomeStat();
+  }catch(e){alert("导入失败："+e.message)}
+};
+
+// ========== 初始化 ==========
+(async ()=>{
+  try{
+    await openDB();
+    await refreshHomeStat();
+  }catch(e){
+    alert("数据库初始化失败："+e.message);
+  }
+})();
+</script>
+</body>
+</html>
